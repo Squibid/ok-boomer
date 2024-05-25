@@ -1,5 +1,6 @@
 package io.wispforest.okboomer.mixin;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.systems.RenderSystem;
 import io.wispforest.okboomer.OkBoomer;
 import io.wispforest.owo.ui.core.Color;
@@ -16,7 +17,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(GameRenderer.class)
@@ -54,11 +54,9 @@ public abstract class GameRendererMixin {
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/MinecraftClient;getLastFrameDuration()F",
                     ordinal = 1
-            ),
-            locals = LocalCapture.CAPTURE_FAILHARD
+            )
     )
-    @SuppressWarnings("InvalidInjectorMethodSignature")
-    private void injectScreenBoomer(float tickDelta, long startTime, boolean tick, CallbackInfo ci, boolean finishedLoading, int mouseX, int mouseY) {
+    private void injectScreenBoomer(float tickDelta, long startTime, boolean tick, CallbackInfo ci, @Local(ordinal = 0) int mouseX, @Local(ordinal = 1) int mouseY) {
         if (OkBoomer.currentlyScreenBooming != this.boom$screenBoomEnabled) {
             if (this.boom$screenBoomEnabled) {
                 OkBoomer.screenBoom = 1;
@@ -70,7 +68,7 @@ public abstract class GameRendererMixin {
         }
 
         final var modelViewStack = RenderSystem.getModelViewStack();
-        modelViewStack.push();
+        modelViewStack.pushMatrix();
 
         modelViewStack.translate(this.boom$lastMouseX, this.boom$lastMouseY, 0);
         modelViewStack.scale(this.boom$lastScreenBoom, this.boom$lastScreenBoom, 1);
@@ -82,7 +80,7 @@ public abstract class GameRendererMixin {
         this.boom$rotat.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(OkBoomer.screenRotation));
         this.boom$rotat.translate(window.getScaledWidth() / -2f, window.getScaledHeight() / -2f, 0);
 
-        modelViewStack.multiplyPositionMatrix(this.boom$rotat.peek().getPositionMatrix());
+        modelViewStack.mul(this.boom$rotat.peek().getPositionMatrix());
 
         this.boom$rotat.peek().getPositionMatrix().invert();
         OkBoomer.mouseTransform = this.boom$rotat.peek().getPositionMatrix();
@@ -110,11 +108,9 @@ public abstract class GameRendererMixin {
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/gui/screen/Screen;renderWithTooltip(Lnet/minecraft/client/gui/DrawContext;IIF)V",
                     shift = At.Shift.AFTER
-            ),
-            locals = LocalCapture.CAPTURE_FAILHARD
+            )
     )
-    @SuppressWarnings("InvalidInjectorMethodSignature")
-    private void bottomText(float tickDelta, long startTime, boolean tick, CallbackInfo ci, boolean finishedLoading, int i, int j, MatrixStack matrixStack, DrawContext drawContext) {
+    private void bottomText(float tickDelta, long startTime, boolean tick, CallbackInfo ci, @Local DrawContext drawContext) {
         drawContext.draw();
 
         if (OkBoomer.CONFIG.iDoNotEndorseTomfoolery()) return;
@@ -179,7 +175,7 @@ public abstract class GameRendererMixin {
             )
     )
     private void uninjectScreenBoomer(float tickDelta, long startTime, boolean tick, CallbackInfo ci) {
-        RenderSystem.getModelViewStack().pop();
+        RenderSystem.getModelViewStack().popMatrix();
         RenderSystem.applyModelViewMatrix();
     }
 

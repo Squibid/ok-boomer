@@ -7,6 +7,7 @@ import io.wispforest.owo.ui.core.Color;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.RotationAxis;
 import org.joml.Vector4f;
@@ -52,11 +53,11 @@ public abstract class GameRendererMixin {
             method = "render",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/MinecraftClient;getLastFrameDuration()F",
+                    target = "Lnet/minecraft/client/render/RenderTickCounter;getLastDuration()F",
                     ordinal = 1
             )
     )
-    private void injectScreenBoomer(float tickDelta, long startTime, boolean tick, CallbackInfo ci, @Local(ordinal = 0) int mouseX, @Local(ordinal = 1) int mouseY) {
+    private void injectScreenBoomer(RenderTickCounter tickCounter, boolean tick, CallbackInfo ci, @Local(ordinal = 0) int mouseX, @Local(ordinal = 1) int mouseY) {
         if (OkBoomer.currentlyScreenBooming != this.boom$screenBoomEnabled) {
             if (this.boom$screenBoomEnabled) {
                 OkBoomer.screenBoom = 1;
@@ -89,8 +90,8 @@ public abstract class GameRendererMixin {
 
         if (OkBoomer.CONFIG.boomTransition()) {
             this.boom$lastScreenBoom += .45 * (OkBoomer.screenBoom - this.boom$lastScreenBoom) * boom$interpolator();
-            this.boom$lastMouseX += .65 * (mouseX - this.boom$lastMouseX) * MinecraftClient.getInstance().getLastFrameDuration();
-            this.boom$lastMouseY += .65 * (mouseY - this.boom$lastMouseY) * MinecraftClient.getInstance().getLastFrameDuration();
+            this.boom$lastMouseX += .65 * (mouseX - this.boom$lastMouseX) * tickCounter.getLastFrameDuration();
+            this.boom$lastMouseY += .65 * (mouseY - this.boom$lastMouseY) * tickCounter.getLastFrameDuration();
 
             this.boom$lastScreenBoom = boom$nudge(this.boom$lastScreenBoom, 1);
             this.boom$lastMouseX = boom$nudge(this.boom$lastMouseX, mouseX);
@@ -110,7 +111,7 @@ public abstract class GameRendererMixin {
                     shift = At.Shift.AFTER
             )
     )
-    private void bottomText(float tickDelta, long startTime, boolean tick, CallbackInfo ci, @Local DrawContext drawContext) {
+    private void bottomText(RenderTickCounter tickCounter, boolean tick, CallbackInfo ci, @Local DrawContext drawContext) {
         drawContext.draw();
 
         if (OkBoomer.CONFIG.iDoNotEndorseTomfoolery()) return;
@@ -174,7 +175,7 @@ public abstract class GameRendererMixin {
                     shift = At.Shift.AFTER
             )
     )
-    private void uninjectScreenBoomer(float tickDelta, long startTime, boolean tick, CallbackInfo ci) {
+    private void uninjectScreenBoomer(RenderTickCounter tickCounter, boolean tick, CallbackInfo ci) {
         RenderSystem.getModelViewStack().popMatrix();
         RenderSystem.applyModelViewMatrix();
     }
@@ -184,7 +185,7 @@ public abstract class GameRendererMixin {
     }
 
     private static float boom$interpolator() {
-        return MinecraftClient.getInstance().getLastFrameDuration() * OkBoomer.CONFIG.boomTransitionSpeed();
+        return MinecraftClient.getInstance().getRenderTickCounter().getLastFrameDuration() * OkBoomer.CONFIG.boomTransitionSpeed();
     }
 
 }
